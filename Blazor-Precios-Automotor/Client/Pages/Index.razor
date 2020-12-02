@@ -1,0 +1,149 @@
+﻿@page "/"
+
+@using Blazor_Precios_Automotor.Shared;
+@using System.Net.Http
+
+@using System.Text.Json;
+
+@inject HttpClient Http
+
+<div class="form-inline w-100" style="margin:10px; background: rgb(255,255,255); background: linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(255,255,255,0.9528186274509804) 100%); position: sticky; top: 0px">
+    <input style="margin:10px" type="text" class="form-control"
+           @bind="@buscarMarca" placeholder="Marca" />
+    <input style="margin:10px" type="text" class="form-control"
+           @bind="@buscarModelo" placeholder="Modelo" />
+    <input style="margin:10px" type="text" class="form-control"
+           @bind="@buscarVersion" placeholder="Versión" />
+    <button style="margin:10px" @onclick="Buscar" type="submit" class="btn btn-outline-primary"><i class="fas fa-search"></i> Buscar</button>
+    <button style="margin:10px" @onclick="Limpiar" type="reset" class="btn btn-outline-danger"><i class="fas fa-backspace"></i> Limpiar</button>
+</div>
+
+
+@if (valores == null)
+{
+    <text>Cargando valores...</text>
+}
+else
+{
+    <div class="table-responsive" style="margin-left:1%">
+        <table class="table table-hover">
+            <thead class="thead-light">
+                <tr>
+                    @*<th>Marca</th>*@
+                    <th>Modelo</th>
+                    <th>Versión</th>
+                    <th>Moneda</th>
+                    <th>Okm</th>
+                    <th>2019</th>
+                    <th>2018</th>
+                    <th>2017</th>
+                    <th>2016</th>
+                    <th>2015</th>
+                    <th>2014</th>
+                    <th>2013</th>
+                    <th>2012</th>
+                    <th>2011</th>
+                    <th>2010</th>
+                    <th>2009</th>
+                    <th>2008</th>
+                    <th>2007</th>
+                    <th>2006</th>
+                    @*<th>2005</th>*@
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var valor in @valores)
+                {
+                    <tr>
+                        @*<td>@valor.Marca</td>*@
+                        <td>@valor.Modelo</td>
+                        <td>@valor.Version</td>
+                        <td>@valor.Moneda</td>
+                        <td>@valor.Okm</td>
+                        <td>@valor.Año2019</td>
+                        <td>@valor.Año2018</td>
+                        <td>@valor.Año2017</td>
+                        <td>@valor.Año2016</td>
+                        <td>@valor.Año2015</td>
+                        <td>@valor.Año2014</td>
+                        <td>@valor.Año2013</td>
+                        <td>@valor.Año2012</td>
+                        <td>@valor.Año2011</td>
+                        <td>@valor.Año2010</td>
+                        <td>@valor.Año2009</td>
+                        <td>@valor.Año2008</td>
+                        <td>@valor.Año2007</td>
+                        <td>@valor.Año2006</td>
+                        @*<td>@valor.Año2005</td>*@
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+<div class="alert alert-success" role="alert" style="text-align:center; margin:15px">
+    Datos no oficiales, valores aproximados al valor de mercado. Actualizados al @fecha.
+</div>
+
+<br />
+<Paginacion PaginasTotales="paginasTotales" PaginaActual="paginaActual" PaginaSeleccionada="PaginaSeleccionada"></Paginacion>
+
+
+@code{
+    public string fecha = DateTime.Now.Day.ToString() + "/" + DateTime.Now.Month.ToString() + "/" + DateTime.Now.Year.ToString();
+
+    IEnumerable<Valores> valores = new List<Valores>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarValores();
+    }
+
+    async Task CargarValores(int pagina = 1, int cantidadRegistrosMostrar = 8)
+    {
+        var httpResponse = await Http.GetAsync($"api/valores/pagfilter?pagina={pagina}&CantidadMostrar={cantidadRegistrosMostrar}&marca={buscarMarca}&modelo={buscarModelo}&version={buscarVersion}");
+        if (httpResponse.IsSuccessStatusCode)
+        {
+            paginasTotales = int.Parse(httpResponse.Headers.GetValues("totalPaginas").FirstOrDefault());
+            Console.WriteLine("paginasTotales " + paginasTotales.ToString());
+            var responseString = await httpResponse.Content.ReadAsStringAsync();
+            valores = JsonSerializer.Deserialize<List<Valores>>(responseString,
+                new JsonSerializerOptions() { PropertyNameCaseInsensitive = true });
+        }
+        else
+        {
+            Console.WriteLine("error");
+        }
+        //valores = await Http.GetFromJsonAsync<Valores[]>("valores");
+    }
+
+    private int paginaActual = 1;
+    private int paginasTotales;
+
+
+    private async Task PaginaSeleccionada(int pagina)
+    {
+        paginaActual = pagina;
+        await CargarValores(pagina);
+    }
+
+    private string buscarMarca = string.Empty;
+    private string buscarModelo = string.Empty;
+    private string buscarVersion = string.Empty;
+
+    private async Task Buscar()
+    {
+        paginaActual = 1;
+        await CargarValores();
+    }
+
+    private async Task Limpiar()
+    {
+        buscarMarca = string.Empty;
+        buscarModelo = string.Empty;
+        buscarVersion = string.Empty;
+        paginaActual = 1;
+        await CargarValores();
+    }
+}
